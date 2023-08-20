@@ -1,63 +1,76 @@
-const express = require("express");
-const mysql = require("mysql");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const multer = require("multer");
+import express from "express";
+import cors from "cors";
+import multer from "multer";
+import { db } from "./connect.js";
+import authRoutes from "./routes/auth.js";
+import noteRoutes from "./routes/note.js";
+import userRoutes from "./routes/users.js";
+import collegeRoutes from "./routes/colleges.js";
+import postRoutes from "./routes/posts.js";
+import commentRoutes from "./routes/comments.js";
+import likeRoutes from "./routes/likes.js";
+import relationshipRoutes from "./routes/relationships.js";
+import courseRoutes from "./routes/courses.js"
+import issueRoutes from "./routes/issues.js"
+
+
+import cookieParser from "cookie-parser";
 
 const app = express();
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", true);
+  next();
+});
+app.use(express.json());
 
-app.use(bodyParser.json());
-app.use(cors());
+app.use(cookieParser());
+const corsOptions ={
+  origin:'http://localhost:3000', 
 
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "root",
-  database: "mca_connect",
+}
+app.use(cors(corsOptions));
+// app.use(cors()); 
+app.use('/uploads', express.static('uploads'))
+app.use("/api/auth", authRoutes);
+app.use('/api/notes',noteRoutes);
+app.use('/api/users',userRoutes);
+app.use('/api/colleges',collegeRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/likes", likeRoutes);
+app.use("/api/relationships", relationshipRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/issues", issueRoutes);
+
+
+
+
+
+
+
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + file.originalname);
+  },
 });
 
-app.get("/fileHome", (req, res) => {
-  const q = "SELECT * from files";
-  db.query(q, (err, data) => {
-    if (err) {
-      console.log(err);
-      return res.json(err);
-    }
-    return res.json(data);
-  });
+const upload = multer({ storage: storage });
+
+app.post("/api/upload", upload.single("file"), (req, res) => {
+  const file = req.file;
+  res.status(200).json(file.filename);
 });
 
-app.get('/fileHome/:id', function(req, res) {
-    const id = req.params.id;
-    connection.query('SELECT path FROM files WHERE id = ?', [id], function(error, results, fields) {
-      if (error) throw error;
-      const file_path = results[0].path;
-      res.download(file_path);
-    });
-  });
 
-const upload = multer({ dest: 'uploads/' });
 
-app.post('/add-file',upload.single('file'), (req, res) => {
-    console.log(req.file);
+app.get("/", (req, res) => {
+  return res.status(200).json("Hello OKsy")
+});
 
-    const { name, type } = req.body;
-    const path = req.file.path;
-    const size = req.file.size;
-    const folder_id = 1;
-  
-    const query = 'INSERT INTO files (name, path, size, type, folder_id) VALUES (?, ?, ?, ?, ?)';
-    const values = [name, path, size, type, folder_id];
-  
-    db.query(query, values, (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).send(err);
-      }
-  
-      res.status(200).send('File uploaded successfully.');
-    });
-  });
   
 
 db.connect((err) => {
